@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>歌詞同期ファイル作成ツール</title>
+    <style>
+        body {
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", sans-serif;
+            line-height: 1.6;
+            padding: 40px 20px;
+            max-width: 850px;
+            margin: auto;
+            background-color: #f8f9fa; 
+            color: #2d3436; 
+        }
+        h1 {
+            color: #2d3436;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 30px;
+        }
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+        p {
+            font-size: 14px;
+            font-weight: bold;
+            margin-bottom: 8px;
+            color: #636e72;
+        }
+        .security-notice {
+            font-size: 11px;
+            color: #b2bec3;
+            font-weight: normal;
+            margin-top: 5px;
+            margin-bottom: 0;
+        }
+        input[type="file"], input[type="text"], button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            box-sizing: border-box;
+            border-radius: 6px;
+            border: 1px solid #dfe6e9;
+            font-size: 14px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #74b9ff;
+        }
+        button {
+            cursor: pointer;
+            color: white;
+            border: none;
+            font-size: 15px;
+            font-weight: bold;
+            transition: all 0.2s ease;
+        }
+        button.action-button {
+            background-color: #4a90e2;
+        }
+        button.action-button:hover:not(:disabled) {
+            background-color: #357abd;
+            transform: translateY(-1px);
+        }
+        button#syncBtn {
+            background-color: #2d3436;
+            margin: 20px 0;
+            padding: 15px;
+        }
+        button#syncBtn:hover:not(:disabled) {
+            background-color: #000000;
+        }
+        button:disabled {
+            background-color: #dfe6e9;
+            color: #b2bec3;
+            cursor: not-allowed;
+        }
+        hr {
+            border: 0;
+            border-top: 1px solid #eee;
+            margin: 25px 0;
+        }
+        .display-wrapper {
+            margin: 20px 0;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid #dfe6e9;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .display-headers {
+            display: flex;
+            background-color: #f1f2f6;
+        }
+        .display-header {
+            font-weight: bold;
+            text-align: center;
+            padding: 12px;
+            font-size: 13px;
+            color: #636e72;
+        }
+        #timestampsHeader {
+            flex-basis: 25%;
+            border-right: 1px solid #dfe6e9;
+        }
+        #lyricsHeader {
+            flex-basis: 75%;
+        }
+        .display-content {
+            display: flex;
+            height: 350px;
+            background-color: #ffffff;
+        }
+        #timestampsDisplay, #lyricsDisplay {
+            overflow-y: scroll;
+            padding: 10px;
+        }
+        #timestampsDisplay {
+            flex-basis: 25%;
+            border-right: 1px solid #dfe6e9;
+            text-align: center;
+            font-family: monospace;
+            color: #74b9ff;
+        }
+        #lyricsDisplay {
+            flex-basis: 75%;
+        }
+        .display-item {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+        .highlight {
+            background-color: #e3f2fd;
+            color: #1976d2;
+            font-weight: bold;
+        }
+        #timeBarContainer {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+        }
+        #currentTimeDisplay, #durationDisplay {
+            font-family: monospace;
+            font-size: 13px;
+            color: #2d3436;
+            min-width: 45px;
+        }
+        #timeBar {
+            flex-grow: 1;
+            margin: 0 15px;
+            height: 6px;
+            appearance: none;
+        }
+        #timeBar::-webkit-progress-bar {
+            background-color: #dfe6e9;
+            border-radius: 10px;
+        }
+        #timeBar::-webkit-progress-value {
+            background-color: #4a90e2;
+            border-radius: 10px;
+        }
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            font-size: 12px;
+            color: #b2bec3;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>歌詞同期ファイル（LRCファイル）作成ツール</h1>
+
+        <p>音源ファイル (MP3 / WAV):</p>
+        <input type="file" id="audioFile" accept="audio/*">
+        
+        <p class="security-notice">※ファイルはサーバーに送信されず、ブラウザ内で安全に処理されます</p>
+        
+        <p style="margin-top: 20px;">歌詞ファイル (TXT):</p>
+        <input type="file" id="lyricsFile" accept=".txt">
+        
+        <p class="security-notice">※ファイルはサーバーに送信されず、ブラウザ内で安全に処理されます</p>
+
+        <hr>
+
+        <div id="timeBarContainer">
+            <span id="currentTimeDisplay">00:00</span>
+            <progress id="timeBar" value="0" max="100"></progress>
+            <span id="durationDisplay">00:00</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <button id="playBtn" class="action-button" disabled>再生</button>
+            <button id="pauseBtn" class="action-button" disabled>一時停止</button>
+        </div>
+        
+        <button id="syncBtn" disabled>同期ポイントを記録</button>
+        
+        <div class="display-wrapper" style="display: none;">
+            <div class="display-headers">
+                <div id="timestampsHeader" class="display-header">TIME</div>
+                <div id="lyricsHeader" class="display-header">LYRICS</div>
+            </div>
+            <div class="display-content">
+                <div id="timestampsDisplay"></div>
+                <div id="lyricsDisplay"></div>
+            </div>
+        </div>
+
+        <p>保存ファイル名:</p>
+        <input type="text" id="fileNameInput" placeholder="ファイル名を入力してください (例: my_song)">
+        <button id="downloadBtn" class="action-button" disabled>LRCファイルをダウンロード</button>
+
+        <footer>
+            <p>&copy; 2026 <a href="https://www.nicovideo.jp/user/130042014" target="_blank" rel="noopener noreferrer">Sumibi</a> All Rights Reserved.</p>
+        </footer>
+    </div>
+
+    <script>
+        const audioFile = document.getElementById('audioFile');
+        const lyricsFile = document.getElementById('lyricsFile');
+        const playBtn = document.getElementById('playBtn');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const syncBtn = document.getElementById('syncBtn');
+        const lyricsDisplay = document.getElementById('lyricsDisplay');
+        const timestampsDisplay = document.getElementById('timestampsDisplay');
+        const displayWrapper = document.querySelector('.display-wrapper');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const currentTimeDisplay = document.getElementById('currentTimeDisplay');
+        const durationDisplay = document.getElementById('durationDisplay');
+        const timeBar = document.getElementById('timeBar');
+        const fileNameInput = document.getElementById('fileNameInput');
+
+        let audio;
+        let lyrics = [];
+        let lrcContent = '';
+        let currentLineIndex = 0;
+        let audioLoaded = false;
+        let lyricsLoaded = false;
+
+        function formatTime(seconds) {
+            const minutes = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            return `${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+        }
+
+        function checkReadiness() {
+            if (audioLoaded && lyricsLoaded) {
+                syncBtn.disabled = false;
+                playBtn.disabled = false;
+                pauseBtn.disabled = false;
+                displayWrapper.style.display = 'flex';
+            }
+        }
+
+        let activeScroll = null;
+        lyricsDisplay.addEventListener('scroll', () => {
+            if (activeScroll === null) activeScroll = 'lyrics';
+            if (activeScroll === 'lyrics') timestampsDisplay.scrollTop = lyricsDisplay.scrollTop;
+        });
+        timestampsDisplay.addEventListener('scroll', () => {
+            if (activeScroll === null) activeScroll = 'timestamps';
+            if (activeScroll === 'timestamps') lyricsDisplay.scrollTop = timestampsDisplay.scrollTop;
+        });
+        lyricsDisplay.addEventListener('mouseup', () => activeScroll = null);
+        timestampsDisplay.addEventListener('mouseup', () => activeScroll = null);
+
+        audioFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                audio = new Audio(URL.createObjectURL(file));
+                audioLoaded = true;
+                checkReadiness();
+                audio.addEventListener('loadedmetadata', () => {
+                    durationDisplay.textContent = formatTime(audio.duration);
+                    timeBar.max = audio.duration;
+                });
+                audio.addEventListener('timeupdate', () => {
+                    currentTimeDisplay.textContent = formatTime(audio.currentTime);
+                    timeBar.value = audio.currentTime;
+                });
+            }
+        });
+
+        lyricsFile.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    lyrics = e.target.result.split('\n').filter(line => line.trim() !== '');
+                    lyricsDisplay.innerHTML = lyrics.map((line, index) => `<div class="display-item" id="lyric-${index}">${line}</div>`).join('');
+                    timestampsDisplay.innerHTML = lyrics.map((line, index) => `<div class="display-item" id="timestamp-${index}"></div>`).join('');
+                    lyricsLoaded = true;
+                    currentLineIndex = 0;
+                    checkReadiness();
+                };
+                reader.readAsText(file);
+            }
+        });
+
+        playBtn.addEventListener('click', () => { if (audio) audio.play(); });
+        pauseBtn.addEventListener('click', () => { if (audio) audio.pause(); });
+
+        syncBtn.addEventListener('click', () => {
+            if (audio && lyrics.length > 0 && currentLineIndex < lyrics.length) {
+                const currentTime = audio.currentTime;
+                const minutes = Math.floor(currentTime / 60);
+                const seconds = Math.floor(currentTime % 60);
+                const milliseconds = Math.floor((currentTime - Math.floor(currentTime)) * 100);
+                const formattedTime = `[${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(2, '0')}]`;
+
+                lrcContent += `${formattedTime}${lyrics[currentLineIndex]}\n`;
+
+                document.querySelectorAll('.highlight').forEach(el => el.classList.remove('highlight'));
+
+                const currentLyric = document.getElementById(`lyric-${currentLineIndex}`);
+                const currentTimestamp = document.getElementById(`timestamp-${currentLineIndex}`);
+                if (currentLyric && currentTimestamp) {
+                    currentLyric.classList.add('highlight');
+                    currentTimestamp.classList.add('highlight');
+                    currentTimestamp.textContent = formattedTime;
+
+                    if (currentLineIndex > 4) {
+                        const scrollToItem = document.getElementById(`lyric-${currentLineIndex - 4}`);
+                        if (scrollToItem) {
+                            lyricsDisplay.scrollTop = scrollToItem.offsetTop - lyricsDisplay.offsetTop;
+                        }
+                    }
+                }
+
+                currentLineIndex++;
+                if (currentLineIndex >= lyrics.length) {
+                    syncBtn.disabled = true;
+                    downloadBtn.disabled = false;
+                }
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            let fileName = fileNameInput.value.trim() || 'lyrics';
+            if (!fileName.endsWith('.lrc')) fileName += '.lrc';
+            const blob = new Blob([lrcContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    </script>
+</body>
+</html>
